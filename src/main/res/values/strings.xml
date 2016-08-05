@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">EmotionKeyBoard</string>
+
+    <string name="btn_send">发送</string>
+</resources>
