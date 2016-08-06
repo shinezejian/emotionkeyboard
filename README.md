@@ -1,10 +1,12 @@
-# android高仿微信表情输入与键盘输入详解
+<font size=4>转载请注明出处：
+http://blog.csdn.net/javazejian/article/details/52126391</font>
+
 &emsp;&emsp;最近公司在项目上要使用到表情与键盘的切换输入，自己实现了一个，还是存在些缺陷，比如说键盘与表情切换时出现跳闪问题，这个相当困扰我，不过所幸在Github（其中一个不错的[开源项目](https://github.com/dss886/Android-EmotionInputDetector)，其代码整体结构很不错）并且在论坛上找些解决方案，再加上我也是研究了好多个开源项目的代码，最后才苦逼地整合出比较不错的实现效果，可以说跟微信基本一样（嘿嘿，只能说目前还没发现大Bug，若发现大家一起日后慢慢完善，这里我也只是给出了实现方案，拓展其他表情我并没有实现哈，不过代码中我实现了一个可拓展的fragment模板以便大家实现自己的表情包），我只是实现了一页表情，代码我也进行另外的封装与拓展，大家需要多表情的话只需要实现自己的表情fragment界面，然后根据工厂类获取即可，废话不多说先上图看效果:
 ![](http://img.blog.csdn.net/20160119154602745?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQv/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
 
 ![](http://img.blog.csdn.net/20160119155153188?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQv/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast)
 效果还不错吧，哈哈。下面开始介绍：
-本篇主要分析的核心类EmotionKeyboard.java,EmotionComplateFragment.java,EmotionMainFragment.java,FragmentFactory.java,还有一个是工具类里的EmotionUtils.java和GlobalOnItemClickManagerUtils.java 这几个类我会重点分析一下，其他的大家自行看源码哈。下面就开始咯，先来看看本篇主要内容以及大概思路：
+本篇主要分析的核心类EmotionKeyboard.java,EmotionComplateFragment.java,EmotionMainFragment.java,FragmentFactory.java,还有一个是工具类里的EmotionUtils.java和GlobalOnItemClickManagerUtils.java 这几个类我会重点分析一下，其他的大家自行看源码哈。下面就开始咯，先来看看本篇主要内容以及大概思路：
 ![](http://img.blog.csdn.net/20160119155717336?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQv/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/Center)
 ##<font color='#F55F5C'>1.解决表情与键盘切换跳闪问题</font>
 ####<font color='#F55F5C'> 1.1跳闪问题概述</font>
@@ -16,7 +18,7 @@
 &emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<font color='#27844F'>**图（1-2）**</font>
 到这里，我们对这个问题有了大概了解后，再来深入分析如何实现图（1-2）的不跳闪效果。这里我们做个约定，我们把含有表情那个bar统称为内容Bar。
 #### <font color='#F55F5C'> 1.2 解决跳闪问题的思路：</font>
- &emsp;&emsp;android系统在弹出软键盘时，会把我们的内容 Bar 顶上去，因此只有表情面板的高度与软键盘弹出时高度一致时，才有可能然切换时高度过渡更自然，所以我们必须计算出软键盘的高度并设置给表情面板。仅仅有这一步跳闪问题还是依旧存在，因此这时我们必须想其他办法固定内容Bar,因为所有的跳闪都是表情面板隐藏，而软键盘往上托出瞬间，Activity高度变高(为什么会变高后面会说明)，内容Bar往下滑后，又被软键盘顶回原来位置造成的。因此只要固定了内容Bar的位置，闪跳问题就迎刃而解了。那么如何固定内容Bar的位置呢？**我们知道在一个布局中一个控件的位置其实是由它上面所有控件的高度决定的，如果其上面其他控件的高度不变，那么当前控件的高度自然也不会变化，即使到时Activity的高度发生了变化也也不会影响该控件的位置**(整个界面的显示是挂载在window窗体上的，而非Activity，不了解的可以先研究一下窗体的创建过程)，因此我们只要在软键盘弹出前固定内容Bar上面所有控件高度，从而达到固定内容Bar位置(高度)的目的。好了，有思路了，我们接下来一步步按上面思路解决问题。
+ &emsp;&emsp;android系统在弹出软键盘时，会把我们的内容 Bar 顶上去，因此只有表情面板的高度与软键盘弹出时高度一致时，才有可能然切换时高度过渡更自然，所以我们必须计算出软键盘的高度并设置给表情面板。仅仅有这一步跳闪问题还是依旧存在，因此这时我们必须想其他办法固定内容Bar,因为所有的跳闪都是表情面板隐藏，而软键盘往上托出瞬间，Activity高度变高(为什么会变高后面会说明)，内容Bar往下滑后，又被软键盘顶回原来位置造成的。因此只要固定了内容Bar的位置，闪跳问题就迎刃而解了。那么如何固定内容Bar的位置呢？**我们知道在一个布局中一个控件的位置其实是由它上面所有控件的高度决定的，如果其上面其他控件的高度不变，那么当前控件的高度自然也不会变化，即使到时Activity的高度发生了变化也也不会影响该控件的位置**(整个界面的显示是挂载在window窗体上的，而非Activity，不了解的可以先研究一下窗体的创建过程)，因此我们只要在软键盘弹出前固定内容Bar上面所有控件高度，从而达到固定内容Bar位置(高度)的目的。好了，有思路了，我们接下来一步步按上面思路解决问题。
 #### <font color='#F55F5C'> 1.3 解决跳闪问题的套路：</font>
 * <font color='#F55F5C'> 1.3.1 先获取键盘高度，并设置表情面板的高度为软键盘的高度</font>
 
@@ -93,7 +95,7 @@ private void unlockContentHeightDelayed() {
     }, 200L);
 }
 ```
-&emsp;&emsp;其中的LinearLayout.LayoutParams.weight = 1.0F;，在代码里动态更改LayoutParam的weight，会导致父控件重新onLayout()，也就达到改变控件的高度的目的。到此两个主要问题都解决了，我们直接上核心类代码，该类[来自github上的开源项目](https://github.com/dss886/Android-EmotionInputDetector  )我在使用中直接从该项目中抽取了该类, 并做了细微修改，也添加了代码注释。
+&emsp;&emsp;其中的LinearLayout.LayoutParams.weight = 1.0F;，在代码里动态更改LayoutParam的weight，会导致父控件重新onLayout()，也就达到改变控件的高度的目的。到此两个主要问题都解决了，我们直接上核心类代码，该类[来自github上的开源项目](https://github.com/dss886/Android-EmotionInputDetector  )我在使用中直接从该项目中抽取了该类, 并做了细微修改，也添加了代码注释。
 
 ```java
 package com.zejian.emotionkeyboard.emotionkeyboardview;
@@ -367,31 +369,31 @@ public class EmotionKeyboard {
 
 ```java
 /**
-    * 绑定表情按钮
-    * @param emotionButton
-    * @return
-    */
-    public EmotionKeyboard bindToEmotionButton(View emotionButton) {
-        emotionButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (mEmotionLayout.isShown()) {
-                    lockContentHeight();//显示软件盘时，锁定内容高度，防止跳闪。
-                    hideEmotionLayout(true);//隐藏表情布局，显示软件盘
-                    unlockContentHeightDelayed();//软件盘显示后，释放内容高度
-                } else {
-                    if (isSoftInputShown()) {//同上
-                        lockContentHeight();
-                        showEmotionLayout();
-                        unlockContentHeightDelayed();
-                    } else {
-                        showEmotionLayout();//两者都没显示，直接显示表情布局
-                    }
-                }
-            }
-        });
-        return this;
-    }
+    * 绑定表情按钮
+    * @param emotionButton
+    * @return
+    */
+    public EmotionKeyboard bindToEmotionButton(View emotionButton) {
+        emotionButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (mEmotionLayout.isShown()) {
+                    lockContentHeight();//显示软件盘时，锁定内容高度，防止跳闪。
+                    hideEmotionLayout(true);//隐藏表情布局，显示软件盘
+                    unlockContentHeightDelayed();//软件盘显示后，释放内容高度
+                } else {
+                    if (isSoftInputShown()) {//同上
+                        lockContentHeight();
+                        showEmotionLayout();
+                        unlockContentHeightDelayed();
+                    } else {
+                        showEmotionLayout();//两者都没显示，直接显示表情布局
+                    }
+                }
+            }
+        });
+        return this;
+    }
 ```
 &emsp;&emsp;这里我们主要重点说明一下点击表情按钮时，显示或者隐藏表情布局以及软键盘的逻辑。首先我们通过<font size=4>`mEmotionLayout.isShown()`</font>去判断表情是否已经显示，如果返回true,这时肯定要去切换成软键盘，因此必须先通过<font size=4>`lockContentHeight()`</font>方法锁定mContentView内容高度，然后通过<font size=4>`hideEmotionLayout(true)`</font>方法因此表情布局并显示软键盘，这里传入true表示显示软键盘，如果传入false则表示不显示软键盘，软键盘显示后通过<font size=4>`unlockContentHeightDelayed()`</font>方法去解锁mContentView内容高度。但如果<font size=4>`mEmotionLayout.isShown()`</font>返回了false，这有两种情况，第1种是如果此时软键盘已经显示，则需先锁定mContentView内容高度，再去隐藏软键盘，然后显示表情布局，最后再解锁mContentView内容高度。第2种情况是软键盘和表情都没显示，这下就简单了，直接显示表情布局即可。好，这个类解析到这，其他直接看源码哈，注释杠杠的哈。最后我们来看看在外部使用该类的例子代码如下：
 
@@ -595,7 +597,7 @@ public Fragment getFragment(int emotionType){
 * 步骤2.在EmotionUtils类中的两个获取方法中完善相应的代码。
 * 步骤3.在创建新的EmotiomComplateFragment模板类时，传递相应的集合标志符即可创建相应的表情面板。
 
- &emsp;&emsp;接下来的问题就是表情如何显示呢？其实这里主要用到了SpannableString拓展性字符串相关知识点，SpannableString可以让一段字符串在显示的时候,将其中某小段文字附着上其他内容或替换成其他内容,拓展内容可以是图片或者是文字格式,比如加粗，显示特殊颜色等。对于SpannableString不熟悉，可先看看[这篇文章 ](http://blog.csdn.net/lan410812571/article/details/9083023 )，下面我只对本篇需要用到的SpannableString作简要介绍：
+ &emsp;&emsp;接下来的问题就是表情如何显示呢？其实这里主要用到了SpannableString拓展性字符串相关知识点，SpannableString可以让一段字符串在显示的时候,将其中某小段文字附着上其他内容或替换成其他内容,拓展内容可以是图片或者是文字格式,比如加粗，显示特殊颜色等。对于SpannableString不熟悉，可先看看[这篇文章 ](http://blog.csdn.net/lan410812571/article/details/9083023 )，下面我只对本篇需要用到的SpannableString作简要介绍：
 &emsp;&emsp;<font color='#F55F5C'>ImageSpan</font>，这个是可以将指定的特殊字符替换成我们所需要的图片。也就是我们可以使用"[表情名字]"这个key作为指定的特殊字符，然后在文本中替换成该key所对应的特殊表情即可。
 简单实例如下：
 
@@ -819,7 +821,7 @@ public class EmotiomComplateFragment extends BaseFragment {
 ```
 注释非常清晰哈。我就不啰嗦了。但这有个要注意的是在for循环时是通过EmotionUtils的getEmojiMap(emotion_map_type).keySet()获取集合，这也印证前面我们所说的EmotiomComplateFragment内部是通过集合标志判断集合类型，最终获取到所需的集合数据，也就生成了不同表情类型的面板。
 
-#### <font color='#F55F5C'> 3.4 表情的输入框插入和删除</font>
+#### <font color='#F55F5C'> 3.4 表情的输入框插入和删除</font>
 &emsp;&emsp;思路：在表情框输入一个表情实际上是在当前光标位置插入一个表情，添加完表情后再把当前光标移动到表情之后，所以我们首先要获取到光标到首位置，这个可以利用EditText.setSelectionStart()方法，添加完表情后要设置光标的位置到表情之后，这个可以使用EditText.setSelection(position)方法。当然如果点击的是删除按钮，那么直接调用系统的 Delete 按钮事件即可。下面直接上代码：
 
 ```java
@@ -932,7 +934,9 @@ if(isBindToBarEditText){
 //设置全局点击事件
 gv.setOnItemClickListener(GlobalOnItemClickManagerUtils.getInstance(getActivity()).getOnItemClickListener(emotion_map_type));
 ```
-好了，到此本篇也完结了，[点击源码地址下载](http://download.csdn.net/detail/javazejian/9409811)，大家其他看源码吧，稍后我会上传一份到github。
+好了，到此本篇也完结了，下面给出源码下载方式：
+[Github项目源码下载地址](https://github.com/shinezejian/emotionkeyboard)
+[CSDN源码地址下载](http://download.csdn.net/detail/javazejian/9409811)
 
 
 
