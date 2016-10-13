@@ -280,7 +280,7 @@ public class EmotionKeyboard {
 	    }
 
 	/**
-	 * 获取软键盘高度
+	 * 获取软键盘高度，由于第一次直接弹出表情时会出现小问题，787是一个均值，作为临时解决方案
 	 * @return
 	 */
 	public int getKeyBoardHeight(){
