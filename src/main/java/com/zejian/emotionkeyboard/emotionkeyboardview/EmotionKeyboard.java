@@ -153,7 +153,7 @@ public class EmotionKeyboard {
 	    private void showEmotionLayout() {
 	        int softInputHeight = getSupportSoftInputHeight();
 	        if (softInputHeight == 0) {
-	            softInputHeight = sp.getInt(SHARE_PREFERENCE_SOFT_INPUT_HEIGHT, 400);
+	            softInputHeight = getKeyBoardHeight();
 	        }
 	        hideSoftInput();
 	        mEmotionLayout.getLayoutParams().height = softInputHeight;
@@ -284,7 +284,7 @@ public class EmotionKeyboard {
 	 * @return
 	 */
 	public int getKeyBoardHeight(){
-		return sp.getInt(SHARE_PREFERENCE_SOFT_INPUT_HEIGHT, 400);
+		return sp.getInt(SHARE_PREFERENCE_SOFT_INPUT_HEIGHT, 787);
 
 	}
 

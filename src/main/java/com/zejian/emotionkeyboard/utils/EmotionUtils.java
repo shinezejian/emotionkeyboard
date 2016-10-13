@@ -101,7 +101,7 @@ public class EmotionUtils {
 				integer = EMOTION_CLASSIC_MAP.get(imgName);
 				break;
 			default:
-				LogUtils.e("the emojiMap is null!!");
+				LogUtils.e("the emojiMap is null!! Handle Yourself ");
 				break;
 		}
 		return integer == null ? -1 : integer;
